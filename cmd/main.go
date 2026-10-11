@@ -2,42 +2,18 @@ package main
 
 import (
 	"fmt"
-	"net"
-	"time"
+
+	"github.com/vlad6tz/goris.git/internal/server"
+	"github.com/vlad6tz/goris.git/internal/store"
 )
 
-func handleConn(conn net.Conn) {
-	defer conn.Close()
-	conn.SetReadDeadline(time.Now().Add(10 * time.Second)) // this prevents hanging
-
-	buffer := make([]byte, 1024)
-
-	for {
-		n, err := conn.Read(buffer)
-		if err != nil {
-			fmt.Println("Error: ", err)
-			return
-		}
-		fmt.Printf("Received %s", buffer[:n])
-		conn.Write([]byte("Received message\n"))
-	}
-}
-
 func main() {
-	listener, err := net.Listen("tcp", ":8080")
+	db := store.New()
+	serv, err := server.New("localhost:8080", db)
 	if err != nil {
-		fmt.Printf("Error listening: %s", err)
+		fmt.Printf("error creating new server: ", err)
 		return
 	}
-	defer listener.Close()
-	fmt.Println("Server running")
 
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			fmt.Printf("error accepting: %s", err)
-			continue
-		}
-		go handleConn(conn) // each conn is in a different goroutine
-	}
+	serv.Serve()
 }
