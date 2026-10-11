@@ -1,9 +1,14 @@
 package server
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"time"
+
+	"github.com/vlad6tz/goris.git/internal/protocol"
 )
 
 type Server struct {
@@ -48,15 +53,21 @@ func (s *Server) Close() error {
 func handleConn(conn net.Conn) {
 	defer conn.Close()
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second)) // prevent client hanging
-	buffer := make([]byte, 512)
+	br := bufio.NewReader(conn)                            // created outside of loop cause only one reader is needed
 
 	for {
-		n, err := conn.Read(buffer)
+		req, err := protocol.ReadRequest(br)
 		if err != nil {
-			fmt.Printf("error reading %s", err)
-			return
+			if errors.Is(err, io.EOF) {
+				return // client hung up which is normal
+			}
+			if errors.Is(err, protocol.ErrUnknownCommand) {
+				conn.Write([]byte("ERR unknown command \r\n"))
+				continue // even tho req fails we still keep the conn alive
+			}
+			return // at this point the req is cooked so we drop it
 		}
-		fmt.Printf("received buffer: %s", buffer[:n])
-		conn.Write([]byte("Received message\n"))
+		fmt.Printf("%s %s = %s\n", req.Command, req.Key, req.Value)
+		conn.Write([]byte("OK\r\n"))
 	}
 }
