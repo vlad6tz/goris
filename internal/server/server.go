@@ -42,7 +42,10 @@ func (s *Server) Serve() error {
 }
 
 func (s *Server) Close() error {
-
+	if err := s.listener.Close(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func handleConn(conn net.Conn) {
