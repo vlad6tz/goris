@@ -10,7 +10,7 @@ type Server struct {
 	listener net.Listener
 }
 
-func (s *Server) New(addr string) (*Server, error) {
+func New(addr string) (*Server, error) {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -25,10 +25,7 @@ func (s *Server) Addr() net.Addr {
 }
 
 func (s *Server) Serve() error {
-	srv, err := net.Listen("tcp", s.Addr().String())
-	if err != nil {
-		return err
-	}
+	srv := s.listener
 	defer srv.Close()
 	for {
 		cli, err := srv.Accept()
