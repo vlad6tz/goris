@@ -9,19 +9,22 @@ import (
 	"time"
 
 	"github.com/vlad6tz/goris.git/internal/protocol"
+	"github.com/vlad6tz/goris.git/internal/store"
 )
 
 type Server struct {
 	listener net.Listener
+	store    *store.Store
 }
 
-func New(addr string) (*Server, error) {
+func New(addr string, s *store.Store) (*Server, error) {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
 	return &Server{
 		listener: l,
+		store:    s,
 	}, nil
 }
 
@@ -37,7 +40,7 @@ func (s *Server) Serve() error {
 		if err != nil {
 			return err
 		}
-		go handleConn(cli) // each conn gets a separate goroutine
+		go s.handleConn(cli) // each conn gets a separate goroutine
 	}
 	// no return nil cause of infinite for loop and return wont be reachable, error handling is inside the loop
 	// and if there is no err the conn is handled
@@ -50,7 +53,7 @@ func (s *Server) Close() error {
 	return nil
 }
 
-func handleConn(conn net.Conn) {
+func (s *Server) handleConn(conn net.Conn) {
 	defer conn.Close()
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second)) // prevent client hanging
 	br := bufio.NewReader(conn)                            // created outside of loop cause only one reader is needed
@@ -68,6 +71,19 @@ func handleConn(conn net.Conn) {
 			return // at this point the req is cooked so we drop it
 		}
 		fmt.Printf("%s %s = %s\n", req.Command, req.Key, req.Value)
-		conn.Write([]byte("OK\r\n"))
+		switch req.Command {
+		case protocol.GET:
+			v, ok := s.store.Get(req.Key)
+			if !ok {
+				conn.Write([]byte("ERR key not found\r\n"))
+				return
+			}
+			conn.Write([]byte("OK\r\n"))
+			conn.Write(v)
+		case protocol.SET:
+			s.store.Set(req.Key, []byte(req.Value))
+			conn.Write([]byte("OK\r\n")) // this is not optimal cause if set fails and it can
+			// the response will be ok
+		}
 	}
 }
