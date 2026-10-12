@@ -16,12 +16,11 @@ build up, layer by layer, a server that speaks a simple key-value protocol, whil
 ## Roadmap
 
 - [x] Accept TCP connections and echo data back
-- [ ] Per-connection read deadlines so idle clients can't hold a goroutine forever
-- [ ] Move to a worker pool instead of unbounded goroutine-per-connection
-- [ ] Define a real line-based protocol (`GET key`, `SET key value`)
-- [ ] In-memory key-value store with a mutex or sharded map
+- [x] Per-connection read deadlines so idle clients can't hold a goroutine forever
+- [x] Move to a worker pool instead of unbounded goroutine-per-connection
+- [/] Define a real line-based protocol (`GET key`, `SET key value`)
+- [x] In-memory key-value store with a mutex or sharded map
 - [ ] Graceful shutdown on `SIGINT` / `SIGTERM`
-- [ ] Benchmarks and profiles
 
 ## Running it
 
