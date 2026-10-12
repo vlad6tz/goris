@@ -25,12 +25,15 @@ const maxLine = 64 << 10
 type Request struct {
 	Command Command
 	Key     string
-	Value   string
+	Value   []byte
 }
 
 func ReadRequest(r *bufio.Reader) (Request, error) {
 	line, err := r.ReadString('\n')
-	if err != nil && !errors.Is(err, io.EOF) {
+	if errors.Is(err, io.EOF) && line == "" {
+		return Request{}, io.EOF // clean disconnect, nothing pending
+	}
+	if err != nil {
 		return Request{}, err
 	}
 	if len(line) > maxLine {
@@ -58,7 +61,7 @@ func ReadRequest(r *bufio.Reader) (Request, error) {
 		return Request{
 			Command: SET,
 			Key:     fields[1],
-			Value:   fields[2],
+			Value:   []byte(fields[2]),
 		}, nil
 	default:
 		return Request{}, ErrUnknownCommand
